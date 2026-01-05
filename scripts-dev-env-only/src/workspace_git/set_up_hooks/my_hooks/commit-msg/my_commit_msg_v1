@@ -1,0 +1,145 @@
+#!/bin/bash
+
+#-----------------------------------------------------------------------------------------------------------
+# Author: Jabrane SAIDI
+# Date: 2025-12-22
+# Script Name: commit-msg
+# Version: 1
+# Description: Commit-msg hook to enforce commit message format and guidelines:
+#    => header:
+#      - mandatory
+#      - in lower case except char(s) between *u[ and ]u*. Example : *u[char]u* => CHAR
+#      - should be 72 characters or less
+#      - format: <type>(<optional scope>): <description>
+#                => type: must be one of these: feat|fix|hotfix|chore|docs|test|design|experiment|refactor|style"
+#                => if current branch is not main|master!develop|dev|release: type commit must match branch name.
+#                   e.g. if branch name is feature/..., type commit must be feat (or feature).
+#    => body & footer
+#      - both optional
+#      - both should be 1000 characters or less
+# Dependencies: No dependencies
+# Environment:
+#      - os: windows 11
+#      - python version: 3.14.0
+#      - git version: 2.51.1.windows.1
+# /!\: It will probably need to be adapted if the environment changes.
+#-----------------------------------------------------------------------------------------------------------
+
+#######################################
+# Define variables
+#######################################
+
+# ===== Commit file & message =====
+COMMIT_FILE="$1" # Read commit message from a file (tmp commit file COMMIT_EDITMSG)
+COMMIT_MSG=$(<"$COMMIT_FILE")
+
+# ========= Commit Header =========
+HEADER=$(echo "$COMMIT_MSG" | head -n 1) # Commit header (first line)
+CURRENT_BRANCH_NAME=$(git symbolic-ref --quiet --short HEAD)
+
+# --- Validation ---
+HEADER_VALID_TYPES="feat|fix|hotfix|chore|docs|test|design|experiment|refactor|style"
+HEADER_LENGTH_LIMIT=72
+
+# ====== Commit Body + Footer =====
+BODY_FOOTER=$(echo "$COMMIT_MSG" | tail -n +2 | sed '/^$/d') # Commit body + footer (everything after the first line)
+
+# --- Validation ---
+BODY_FOOTER_LENGTH_LIMIT=1000
+
+
+#######################################
+# Header processing
+#######################################
+
+transform_header() {
+    local header="$1"
+
+    # === To lowercase
+    header="${header,,}"   # convert to lowercase
+    # echo "header(lower case)=$header"  # return value via stdout
+
+    # === Transform between *u[ and ]u* into uppercase (only the characters inside)
+    header=$(echo "$header" | sed -E 's/(\*u\[)([^]]*)(\]u\*)/\1\U\2\E\3/g')
+    # echo "header(upper case)=$header"
+
+    # === Remove markers *u[ and ]u*
+    header=$(echo "$header" | sed 's/\*u\[//g; s/\]u\*//g')
+    # echo "header(markers removed)=$header"
+
+    echo $header # returned value
+}
+
+validate_header(){
+    local header="$1"
+    local header_length=$(echo -n "$header" | wc -c)
+    local header_type="${header%%[(:]*}" # everything before the first ( or : 
+    local branch_name="$2"
+
+    # === Check if header exists
+    if [[ -z "$header" ]]; then
+        echo "Error(commit-msg): Commit message header is mandatory." >&2
+        exit 1 # Exit the script and prevent commit
+    fi
+
+    # === Validate header length (<= $HEADER_LENGTH_LIMIT characters)
+    if [ "$header_length" -gt $HEADER_LENGTH_LIMIT ]; then
+        echo "Error(commit-msg): Commit message header should be $HEADER_LENGTH_LIMIT characters or less." >&2
+        exit 1 # Exit the script and prevent commit
+    fi
+
+    # === Validate header format: <type>(<optional scope>): <description>
+    if ! echo "$header" | grep -qE "^($HEADER_VALID_TYPES)(\([a-zA-Z0-9_-]+\))?: .+"; then
+        echo "Error(commit-msg): Header must start with one of the following types: $HEADER_VALID_TYPES." >&2
+        echo "The format must be: <type>(<optional scope>): <description>" >&2
+        echo "Example: 'feat(auth): add JWT authentication for login'" >&2
+        exit 1 # Exit the script and prevent commit
+    fi
+
+    # === Validate the header type against the current branch type (branch name must starts with header type.
+    # exept if it's main|master!develop|dev|release)
+    if [[ "$branch_name" != "main" && "$branch_name" != "master" && "$branch_name" != "develop" && "$branch_name" != "dev" && "$branch_name" != "release" ]]; then
+        if [[ ! "$branch_name" == "$header_type"* ]]; then
+            echo "Error(commit-msg): Header type ($header_type) does not match branch name ($branch_name)." >&2
+            exit 1 # Exit the script and prevent commit
+        fi
+    fi
+
+}
+
+validate_body_footer(){
+    local body_footer="$1"
+    local body_footer_length=$(echo -n "$body_footer" | wc -c)
+    #echo $body_footer_length
+
+    # === Validate body_footer length (<= $BODY_FOOTER_LENGTH_LIMIT characters)
+    if [ "$body_footer_length" -gt $BODY_FOOTER_LENGTH_LIMIT ]; then
+        echo "Error(commit-msg): Commit message body and footer should be $BODY_FOOTER_LENGTH_LIMIT characters or less." >&2
+        exit 1 # Exit the script and prevent commit
+    fi
+}
+
+write_commit(){
+    local header="$1"
+    local body_footer="$2"
+
+    echo "$header" > "$COMMIT_FILE" # new file
+    echo "" >> "$COMMIT_FILE" # append empty line
+    echo "$body_footer" >> "$COMMIT_FILE" # append body and footer
+}
+
+#######################################
+# Main
+#######################################
+
+main() {
+    transformed_header=$(transform_header "$HEADER") 
+    #echo "Transformed header: $transformed_header"
+
+    validate_header "$transformed_header" "$CURRENT_BRANCH_NAME"
+    validate_body_footer "$BODY_FOOTER"
+
+    write_commit "$transformed_header" "$BODY_FOOTER"
+}
+
+main

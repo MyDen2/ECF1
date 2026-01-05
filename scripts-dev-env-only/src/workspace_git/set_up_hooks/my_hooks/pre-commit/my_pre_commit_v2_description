@@ -1,0 +1,13 @@
+===========================================================================================================================
+pre-commit v2: 
+--------------
+
+Description: Pre-commit hook to enforce checks and guidelines:
+   => branch:
+     - format: "main|master|develop|dev|release|feature|fix|bugfix|hotfix|chore|docs|test|design|experiment|refactor|style"
+     - lowercase only
+     - can contains interger numbers
+     - should be 60 characters or less
+     - no spaces and only '-' or '/' characters
+     - *allow the user to commits directly to the main or master branchs
+===========================================================================================================================

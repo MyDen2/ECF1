@@ -1,0 +1,13 @@
+===========================================================================================================================
+pre-commit v1: 
+--------------
+
+Description: Pre-commit hook to enforce checks and guidelines:
+   => branch:
+     - format: "main|master|develop|dev|release|feature|fix|bugfix|hotfix|chore|docs|test|design|experiment|refactor|style"
+     - lowercase only
+     - can contains interger numbers
+     - should be 60 characters or less
+     - no spaces and only '-' or '/' characters
+     - prevent commits directly on the main branch
+===========================================================================================================================

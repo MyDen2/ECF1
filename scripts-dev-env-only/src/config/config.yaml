@@ -1,0 +1,11 @@
+app:
+  name: scripts-dev-env-only
+  source_code_folder: src
+
+workspace_git:
+  name: workspace_git
+  actions:
+    set_up_hooks: 
+      folder_name: set_up_hooks
+      additional_data:
+        my_hooks_dir_name: my_hooks

@@ -10,6 +10,8 @@ from src.transformers.quotes_transformer import transform_quotes
 from src.loaders.bronze_writer import write_bronze_json
 from src.loaders.silver_writer import write_silver_csv
 from src.loaders.postgres_loader import load_books, load_quotes
+from src.loaders.bronze_files import copy_to_bronze
+from src.extractors.partners_excel import read_partners_excel
 
 
 class ECFPipeline:
@@ -19,6 +21,9 @@ class ECFPipeline:
 
     def run(self):
         run_id = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H-%M-%S")
+        self._bronze_snapshot_partners_excel(run_id)
+        partners_raw = self._read_partners_excel_bronze(run_id)
+        self.logger.info(f"Partners RAW (Excel) count = {len(partners_raw)}")
         self.logger.info("=" * 60)
         self.logger.info(f"START ECF PIPELINE run_id={run_id}")
         self.logger.info("=" * 60)
@@ -38,6 +43,30 @@ class ECFPipeline:
         except Exception as e:
             self.logger.exception(f"PIPELINE EN ERREUR ❌ : {e}")
             raise
+
+    def _bronze_snapshot_partners_excel(self, run_id: str) -> str:
+        self.logger.info("[BRONZE] Snapshot Excel partenaires")
+
+        src = self.config["partner_xlsx_path"]
+        dest = copy_to_bronze(
+            src_path=src,
+            bronze_dir=self.config["bronze_dir"],
+            run_id=run_id,
+            dest_name="partners_source.xlsx",
+        )
+
+        self.logger.info(f"Excel copié en Bronze: {dest}")
+        return dest
+
+    def _read_partners_excel_bronze(self, run_id: str) -> list[dict]:
+        self.logger.info("[EXTRACT] Lecture Excel partenaires (depuis Bronze)")
+
+        # Chemin du snapshot Bronze
+        bronze_xlsx = f"{self.config['bronze_dir']}/run_id={run_id}/partners_source.xlsx"
+
+        rows = read_partners_excel(bronze_xlsx, logger=self.logger)
+
+        return rows
 
     def _extract_books(self, run_id: str) -> list[dict]:
         self.logger.info("[1/3] EXTRACTION - Books")

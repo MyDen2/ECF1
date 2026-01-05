@@ -43,7 +43,7 @@ CREATE TABLE gold.quote_tags (
 
 -- Partenaires (Excel) - RGPD: pas de PII en clair en Gold
 CREATE TABLE IF NOT EXISTS gold.partners (
-  partner_id BIGSERIAL PRIMARY KEY,
+  partner_id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   nom_librairie TEXT NOT NULL,
   adresse TEXT NOT NULL,
   code_postal TEXT,
@@ -57,7 +57,7 @@ CREATE TABLE IF NOT EXISTS gold.partners (
 
 -- Géocodage (API Adresse)
 CREATE TABLE IF NOT EXISTS gold.partner_geocoding (
-  partner_id BIGINT PRIMARY KEY REFERENCES gold.partners(partner_id) ON DELETE CASCADE,
+  partner_id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY REFERENCES gold.partners(partner_id) ON DELETE CASCADE,
   label TEXT,
   score NUMERIC(5,4),
   longitude NUMERIC(10,6),

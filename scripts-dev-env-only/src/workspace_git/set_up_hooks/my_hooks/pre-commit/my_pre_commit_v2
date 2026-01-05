@@ -1,0 +1,83 @@
+#!/bin/sh
+
+#-----------------------------------------------------------------------------------------------------------
+# Author: Jabrane SAIDI
+# Date: 2025-12-25
+# Script Name: pre-commit
+# Version: 2
+# Description: Pre-commit hook to enforce checks and guidelines:
+#    => branch:
+#      - format: "main|master|develop|dev|release|feature|fix|bugfix|hotfix|chore|docs|test|design|experiment|refactor|style"
+#      - lowercase only
+#      - can contains interger numbers
+#      - should be 60 characters or less
+#      - no spaces and only '-' or '/' characters
+#      - *allow the user to commits directly to the main or master branchs
+# Dependencies: No dependencies
+# Environment:
+#      - os: windows 11
+#      - python version: 3.14.0
+#      - git version: 2.51.1.windows.1
+# /!\: It will probably need to be adapted if the environment changes.
+#-----------------------------------------------------------------------------------------------------------
+
+#######################################
+# Define variables
+#######################################
+# ============ Branch =============
+CURRENT_BRANCH_NAME=$(git symbolic-ref --quiet --short HEAD)
+
+# --- Validation ---
+BRANCH_VALID_TYPES_MATCH_EXACTLY="main|master|develop|dev|release"
+BRANCH_VALID_TYPES_MATCH_STARTS_WITH="feature|fix|bugfix|hotfix|chore|docs|test|design|experiment|refactor|style"
+BRANCH_LENGTH_LIMIT=60
+
+
+#######################################
+# Branch processing
+#######################################
+
+validate_branch(){
+    local branch_name="$1"
+    local branch_length=$(echo -n "$branch_name" | wc -c)
+    #echo "current branch name: $branch_name"
+    #echo "current branch length: $branch_length"
+
+	# === maximum length: BRANCH_LENGTH_LIMIT
+    if [ "$branch_length" -gt $BRANCH_LENGTH_LIMIT ]; then
+        echo "Error(pre-commit): Current branch ($branch_name) have "$branch_length" characters. It should be $BRANCH_LENGTH_LIMIT characters or less." >&2
+        exit 1 # Exit the script and prevent commit
+    fi
+
+    # === check allowed characters in the branch name
+    if [[ ! "$branch_name" =~ ^[a-z0-9/-]+$ ]]; then
+        echo -e "
+		Error(pre-commit): Current branch name ($branch_name) is not valid. It must contains only:\n
+		- letters in lowercase\n
+		- integer numbers (0-9)\n
+		- characters: '/', '-'
+		" >&2
+        exit 1 # Exit the script and prevent commit
+    fi
+
+	# === check format
+	if [[ ! "$branch_name" =~ ^($BRANCH_VALID_TYPES_MATCH_EXACTLY)$ ]] && [[ ! "$branch_name" =~ ^($BRANCH_VALID_TYPES_MATCH_STARTS_WITH)/ ]]; then
+		echo -e "
+		Error(pre-commit): branch name ($branch_name) is not allowed. It must:\n
+		- be exactly: 'main' or 'master' or 'develop' or 'dev' or 'release'\n
+		- or starts with: 'feature/' or 'fix/' or 'bugfix/' or 'hotfix/' or 'chore/' or 'docs/' or 'test/' or 'design/' or 'experiment/' or 'refactor/' or 'style/'
+		" >&2
+		exit 1 # Exit the script and prevent commit
+	fi
+}
+
+#######################################
+# Main
+#######################################
+
+main() {
+    # --- Branch ---
+    validate_branch "$CURRENT_BRANCH_NAME"
+}
+
+main
