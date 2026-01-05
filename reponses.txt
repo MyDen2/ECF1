@@ -1,0 +1,108 @@
+1. Choix d’architecture globale
+
+Architecture : Lakehouse léger en 3 zones Bronze / Silver / Gold.
+
+Bronze (Raw) : conservation pérenne des données brutes (scraping/API en JSON + copie du fichier Excel), horodatées et non écrasées.
+
+Silver (Clean) : données nettoyées, standardisées et conformes RGPD, stockées en CSV.
+
+Gold (Serving) : tables relationnelles dans PostgreSQL (schéma gold), indexées et interrogeables en SQL.
+
+Pourquoi ce choix : il combine la traçabilité d’un Data Lake (raw immuable) et la facilité d’analyse d’un Data Warehouse (SQL), tout en restant réaliste et reproductible en Docker.
+
+Avantages : audit/reprocessing depuis le brut, séparation claire des étapes, conformité RGPD plus simple, SQL + jointures multi-sources, évolutif (ajout de sources).
+Inconvénients : duplication des données entre couches, conventions à maintenir (noms/schémas), deux stockages (fichiers + DB).
+
+2. Choix des technologies
+Données brutes (Bronze)
+
+Choix : stockage fichiers sur volume Docker (data/bronze/) en JSON (scraping/API) + copie du XLSX.
+Justification : format fidèle à la source, facile à rejouer/auditer, pas de contrainte de schéma, simple et robuste en ECF.
+Alternative : S3/MinIO (plus scalable, mais plus complexe à mettre en place pour un projet local).
+
+Données transformées (Silver)
+
+Choix : fichiers CSV (data/silver/) générés via Python (pandas/csv).
+Justification : format universel, simple à valider et déboguer, adapté au volume, maîtrise totale dans un contexte ECF.
+Alternative : Parquet (plus performant/typé, mais nécessite une montée en compétence et outillage dédié).
+
+Interrogation SQL (Gold)
+
+Choix : PostgreSQL (Docker) + schema.sql + index + vues.
+Justification : SQL complet (jointures, agrégations, window functions), standard pro, répond directement à EF6 et facilite EF7.
+Alternative : DuckDB (très simple et rapide sur fichiers, mais moins adapté à une plateforme “serveur” partagée persistante).
+
+3. Organisation des données
+
+Organisation par zones + exécutions horodatées (run_id).
+
+data/bronze/run_id=.../ : données brutes (JSON/XLSX).
+
+data/silver/run_id=.../ : données nettoyées (CSV).
+
+Gold : base PostgreSQL, schéma gold, tables finales + vues analytiques.
+
+Couches de transformation :
+
+Bronze → Silver : nettoyage, normalisation, déduplication, conversions (ex : £→€), RGPD (minimisation/pseudonymisation).
+
+Silver → Gold : chargement dans le modèle relationnel, création d’index et vues.
+
+Convention de nommage :
+
+Fichiers : {source}_{etat}.json/csv (ex : quotes_raw.json, quotes_clean.csv)
+
+Dossiers : run_id=YYYY-MM-DDTHH-MM-SS
+
+Tables : gold.<nom_table> (ex : gold.books, gold.quotes, gold.partners)
+
+Champs : snake_case, types cohérents, clés techniques en _id.
+
+4. Modélisation des données (couche finale)
+
+Modèle : relationnel normalisé (3NF légère) + tables de faits/dimensions simples.
+Objectif : permettre des jointures multi-sources, des agrégations et des requêtes analytiques.
+
+Schéma (texte / ERD simplifié) :
+
+gold.books(book_id, title, category, price_eur, rating, availability, scraped_at)
+
+gold.authors(author_id, name)
+gold.quotes(quote_id, quote_text, author_id, scraped_at)
+gold.quote_tags(quote_id, tag)
+
+gold.partners(partner_id, nom_librairie, adresse, code_postal, ville, specialite,
+              ca_annuel, date_partenariat, contact_hash)
+
+gold.partner_geocoding(partner_id, label, score, longitude, latitude, queried_at)
+
+
+Justification :
+
+séparation auteurs/citations/tags pour éviter redondance,
+
+partenaires séparés du géocodage (1–1) pour isoler l’enrichissement API,
+
+modèle simple, stable et optimisé pour SQL (EF6) et analyses croisées (EF7).
+
+5. Conformité RGPD
+
+Données personnelles identifiées : contact_nom, contact_email, contact_telephone (dans le fichier Excel partenaire).
+
+Mesures de protection :
+
+Minimisation : en Gold, on ne stocke pas email/téléphone/nom en clair.
+
+Pseudonymisation : création d’un contact_hash (hash irréversible) pour identifier un contact sans exposer la donnée.
+
+Séparation des couches : Bronze contient la copie brute (accès restreint), Silver contient une version nettoyée avec PII masquée/supprimée, Gold n’expose que ce qui est nécessaire à l’analyse.
+
+Logs : pas de PII dans les logs (masquage).
+
+Rétention : conservation limitée des données Bronze contenant PII (durée définie dans la doc).
+
+Droit à l’effacement :
+
+procédure : identifier l’enregistrement (via partner_id ou contact_hash), puis supprimer les données associées dans Silver et Gold, et purger le brut dans Bronze (ou supprimer le run concerné si possible).
+
+en base : suppression des lignes gold.partners et gold.partner_geocoding liées (cascade si configurée).

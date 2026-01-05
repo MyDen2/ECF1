@@ -1,0 +1,42 @@
+# Environnement virtuel
+venv/
+venv_etl/
+.venv/
+env/
+
+# Fichiers Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Variables d'environnement et secrets
+.env
+.env.local
+config/secrets.yaml
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Donnees sensibles
+data/raw/*.csv
+data/processed/*.csv
+data/output/*.xlsx
+data/output/*.csv
+logs/*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Exceptions (garder les exemples)
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+!data/output/.gitkeep
