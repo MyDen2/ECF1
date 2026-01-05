@@ -33,9 +33,7 @@ def load_quotes(conn: psycopg.Connection, quotes_rows: list[dict], truncate: boo
     
     with conn.cursor() as cur:
         if truncate:
-            cur.execute("TRUNCATE TABLE gold.quote_tags;")
-            cur.execute("TRUNCATE TABLE gold.quotes;")
-            cur.execute("TRUNCATE TABLE gold.authors;")
+            cur.execute("TRUNCATE TABLE gold.quote_tags, gold.quotes, gold.authors RESTART IDENTITY;")
 
         if not quotes_rows:
             return 0
