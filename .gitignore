@@ -2,9 +2,18 @@
 .env
 config/.env
 
-# Données générées (Lakehouse)
-data/
-logs/
+# Data Lake (contenu uniquement)
+data/bronze/*
+data/silver/*
+data/gold/*
+
+# Logs
+logs/*
+
+# Exceptions (sauvergarde des dossiers)
+!data/bronze/.gitkeep
+!data/silver/.gitkeep
+!data/gold/.gitkeep
 
 # Fichiers temporaires
 __pycache__/
