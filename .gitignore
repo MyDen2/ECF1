@@ -5,7 +5,6 @@ config/.env
 # Data Lake (contenu uniquement)
 data/bronze/*
 data/silver/*
-data/gold/*
 
 # Logs
 logs/*
@@ -13,7 +12,6 @@ logs/*
 # Exceptions (sauvergarde des dossiers)
 !data/bronze/.gitkeep
 !data/silver/.gitkeep
-!data/gold/.gitkeep
 
 # Fichiers temporaires
 __pycache__/

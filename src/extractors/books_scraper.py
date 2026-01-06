@@ -25,29 +25,6 @@ def _get_soup(session: requests.Session, url: str, delay_s: float, logger) -> Be
     time.sleep(delay_s)
     return BeautifulSoup(resp.text, "lxml")
 
-# def _download_image(session, img_url, out_dir, logger):
-#     os.makedirs(out_dir, exist_ok=True)
-
-#     ext = os.path.splitext(img_url.split("?")[0])[1] or ".jpg"
-#     filename = hashlib.md5(img_url.encode("utf-8")).hexdigest() + ext
-#     path = os.path.join(out_dir, filename)
-
-#     if os.path.exists(path):
-#         logger.debug(f"Image déjà présente : {path}")
-#         return path
-
-#     try:
-#         r = session.get(img_url, timeout=30)
-#         r.raise_for_status()
-#         with open(path, "wb") as f:
-#             f.write(r.content)
-#         logger.info(f"Image téléchargée : {path}")
-#     except requests.RequestException as e:
-#         logger.warning(f"Impossible de télécharger l’image {img_url} : {e}")
-#         return None
-
-#     return path
-
 def _download_image(session, img_url, out_dir, logger):
    
     bucket = os.getenv("S3_BUCKET", "images")
