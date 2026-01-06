@@ -1,4 +1,5 @@
 import psycopg
+from typing import List, Dict, Any
 
 def load_books(conn: psycopg.Connection, books_rows: list[dict], truncate: bool = True) -> int:
     with conn.cursor() as cur:
@@ -80,3 +81,58 @@ def load_quotes(conn: psycopg.Connection, quotes_rows: list[dict], truncate: boo
             )
 
     return len(quotes_rows)
+
+def load_partners(conn, rows: List[Dict[str, Any]], truncate: bool = False) -> int:
+    """
+    Charge les partners CLEAN (RGPD) dans gold.partners.
+    rows attend des clés :
+    nom_librairie, adresse, code_postal, ville, specialite, ca_annuel, date_partenariat, contact_hash
+    """
+    if not rows:
+        return 0
+
+    with conn.cursor() as cur:
+        if truncate:
+            cur.execute("TRUNCATE TABLE gold.partners RESTART IDENTITY CASCADE;")
+
+        sql = """
+        INSERT INTO gold.partners
+          (nom_librairie, adresse, code_postal, ville, specialite, ca_annuel, date_partenariat, contact_hash)
+        VALUES
+          (%(nom_librairie)s, %(adresse)s, %(code_postal)s, %(ville)s, %(specialite)s,
+           %(ca_annuel)s, %(date_partenariat)s, %(contact_hash)s)
+        ON CONFLICT (nom_librairie, adresse, code_postal, ville)
+        DO UPDATE SET
+          specialite = EXCLUDED.specialite,
+          ca_annuel = EXCLUDED.ca_annuel,
+          date_partenariat = EXCLUDED.date_partenariat,
+          contact_hash = EXCLUDED.contact_hash
+        ;
+        """
+        cur.executemany(sql, rows)
+        return cur.rowcount if cur.rowcount != -1 else len(rows)
+
+def load_partner_geocoding(conn, rows, truncate=False):
+    """
+    rows: list[dict] avec partner_id, label, score, lon, lat
+    """
+
+    if not rows:
+        return 0
+    
+    with conn.cursor() as cur:
+        if truncate:
+            cur.execute("TRUNCATE TABLE gold.partner_geocoding;")
+
+        sql = """
+        INSERT INTO gold.partner_geocoding (partner_id, label, score, longitude, latitude)
+        VALUES (%(partner_id)s, %(label)s, %(score)s, %(lon)s, %(lat)s)
+        ON CONFLICT (partner_id) DO UPDATE SET
+          label = EXCLUDED.label,
+          score = EXCLUDED.score,
+          longitude = EXCLUDED.longitude,
+          latitude = EXCLUDED.latitude;
+        """
+
+        cur.executemany(sql, rows)
+        return cur.rowcount if cur.rowcount != -1 else len(rows)

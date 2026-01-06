@@ -3,6 +3,11 @@ import shutil
 
 
 def copy_to_bronze(src_path: str, bronze_dir: str, run_id: str, dest_name: str) -> str:
+    """
+    Cette fonction copie le fichier source tel quel dans la zone Bronze (raw) sous un run_id.
+    Exemple: partenaire_librairies.xlsx -> data/bronze/run_id=.../partners_source.xlsx
+    """
+    
     out_dir = os.path.join(bronze_dir, f"run_id={run_id}")
     os.makedirs(out_dir, exist_ok=True)
 

@@ -57,7 +57,7 @@ CREATE TABLE IF NOT EXISTS gold.partners (
 
 -- Géocodage (API Adresse)
 CREATE TABLE IF NOT EXISTS gold.partner_geocoding (
-  partner_id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY REFERENCES gold.partners(partner_id) ON DELETE CASCADE,
+  partner_id BIGINT PRIMARY KEY REFERENCES gold.partners(partner_id) ON DELETE CASCADE,
   label TEXT,
   score NUMERIC(5,4),
   longitude NUMERIC(10,6),
