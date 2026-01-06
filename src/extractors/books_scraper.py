@@ -3,6 +3,8 @@ import re
 import time
 import hashlib
 from urllib.parse import urljoin
+from src.utils.minio_client import ensure_bucket, object_exists, upload_bytes
+
 
 import requests
 from bs4 import BeautifulSoup
@@ -23,34 +25,58 @@ def _get_soup(session: requests.Session, url: str, delay_s: float, logger) -> Be
     time.sleep(delay_s)
     return BeautifulSoup(resp.text, "lxml")
 
+# def _download_image(session, img_url, out_dir, logger):
+#     os.makedirs(out_dir, exist_ok=True)
 
-def _parse_price(price_text):
-    m = re.findall(r"[\d.]+", price_text)
-    return float(m[0]) if m else 0.0
+#     ext = os.path.splitext(img_url.split("?")[0])[1] or ".jpg"
+#     filename = hashlib.md5(img_url.encode("utf-8")).hexdigest() + ext
+#     path = os.path.join(out_dir, filename)
 
+#     if os.path.exists(path):
+#         logger.debug(f"Image déjà présente : {path}")
+#         return path
+
+#     try:
+#         r = session.get(img_url, timeout=30)
+#         r.raise_for_status()
+#         with open(path, "wb") as f:
+#             f.write(r.content)
+#         logger.info(f"Image téléchargée : {path}")
+#     except requests.RequestException as e:
+#         logger.warning(f"Impossible de télécharger l’image {img_url} : {e}")
+#         return None
+
+#     return path
 
 def _download_image(session, img_url, out_dir, logger):
-    os.makedirs(out_dir, exist_ok=True)
+   
+    bucket = os.getenv("S3_BUCKET", "images")
+    ensure_bucket(bucket)
 
     ext = os.path.splitext(img_url.split("?")[0])[1] or ".jpg"
     filename = hashlib.md5(img_url.encode("utf-8")).hexdigest() + ext
-    path = os.path.join(out_dir, filename)
 
-    if os.path.exists(path):
-        logger.debug(f"Image déjà présente : {path}")
-        return path
+    prefix = (out_dir or "books").strip("/")
+
+    key = f"{prefix}/{filename}"
+
+    if object_exists(bucket, key):
+        logger.debug(f"Image déjà présente dans MinIO : s3://{bucket}/{key}")
+        return key
 
     try:
         r = session.get(img_url, timeout=30)
         r.raise_for_status()
-        with open(path, "wb") as f:
-            f.write(r.content)
-        logger.info(f"Image téléchargée : {path}")
+        content_type = r.headers.get("Content-Type", "image/jpeg")
+        upload_bytes(bucket=bucket, key=key, data=r.content, content_type=content_type)
+        logger.info(f"Image uploadée dans MinIO : s3://{bucket}/{key}")
+        return key
     except requests.RequestException as e:
         logger.warning(f"Impossible de télécharger l’image {img_url} : {e}")
         return None
-
-    return path
+    except Exception as e:
+        logger.warning(f"Impossible d’uploader l’image vers MinIO {img_url} : {e}")
+        return None
 
 
 def scrape_books(
@@ -58,7 +84,7 @@ def scrape_books(
     logger,
     delay_s=1.0,
     download_images=True,
-    images_dir="data/images/books",
+    images_dir="books",
 ):
     logger.info("Début du scraping Books to Scrape")
 
