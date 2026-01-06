@@ -3,7 +3,7 @@ import re
 import time
 import hashlib
 from urllib.parse import urljoin
-from src.utils.minio_client import ensure_bucket, object_exists, upload_bytes
+from src.storage.minio_client import ensure_bucket, object_exists, upload_bytes
 
 
 import requests

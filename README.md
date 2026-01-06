@@ -75,9 +75,10 @@ ECF1/
 │   |   ├── books_transformer.py                    
 |   |   ├── partners_cleaner.py
 │   |   └── quotes_transformer.py
-│   ├── utils/
-│   |   ├── logger.py                    
-│   |   └── minio_client.py
+│   ├── storage/                    
+│   |   └── minio_client.py 
+│   ├── utils/                    
+│   |   └── logger.py
 │   ├── main.py
 │   └── pipeline.py
 │

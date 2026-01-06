@@ -119,20 +119,6 @@ class ECFPipeline:
             """)
             return cur.fetchall()
 
-    # def _extract_partners_for_geocoding(self, conn):
-    #     with conn.cursor() as cur:
-    #         cur.execute("""
-    #             SELECT p.partner_id, p.adresse, p.code_postal, p.ville
-    #             FROM gold.partners p
-    #             LEFT JOIN gold.partner_geocoding g
-    #             ON g.partner_id = p.partner_id
-    #             WHERE g.partner_id IS NULL
-    #             ORDER BY p.partner_id
-    #         """)
-    #         return cur.fetchall()
-
-
-
     def _extract_books(self, run_id: str) -> list[dict]:
         self.logger.info("[1/3] EXTRACTION - Books")
 

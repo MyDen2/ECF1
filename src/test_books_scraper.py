@@ -8,7 +8,7 @@ def main():
         user_agent="DataPulseAnalyticsBot/1.0",
         logger=logger,
         delay_s=1.0,              # politesse
-        download_images=False     # d’abord on teste sans images
+        download_images=False    
     )
 
     print(f"✅ Livres extraits: {len(rows)}")
